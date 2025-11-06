@@ -1,0 +1,16 @@
+# Установить кодировку для всех текстовых файлов
+*.cs        text working-tree-encoding=UTF-8
+*.txt       text working-tree-encoding=UTF-8
+*.json      text working-tree-encoding=UTF-8
+*.xml       text working-tree-encoding=UTF-8
+*.config    text working-tree-encoding=UTF-8
+*.cshtml    text working-tree-encoding=UTF-8
+*.razor     text working-tree-encoding=UTF-8
+*.md        text working-tree-encoding=UTF-8
+*.sql       text working-tree-encoding=UTF-8
+
+# Для бинарных файлов
+*.png       binary
+*.jpg       binary
+*.dll       binary
+*.exe       binary
