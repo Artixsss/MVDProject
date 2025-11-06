@@ -1,0 +1,115 @@
+# MVD Project - Docker Compose Configuration
+# Для запуска: docker-compose up
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database with PostGIS
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: mvd_postgres
+    environment:
+      POSTGRES_DB: mvd_db
+      POSTGRES_USER: mvd_user
+      POSTGRES_PASSWORD: mvd_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mvd_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mvd_user -d mvd_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend (ASP.NET Core)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mvd_backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5029
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=mvd_db;Username=mvd_user;Password=mvd_password
+    ports:
+      - "5029:5029"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mvd_network
+    volumes:
+      - ./backend:/app
+    restart: unless-stopped
+
+  # Frontend User (Flutter Web) - Nginx serving static files
+  frontend-user:
+    build:
+      context: ./frontend-user
+      dockerfile: Dockerfile
+    container_name: mvd_frontend_user
+    ports:
+      - "3000:80"
+    networks:
+      - mvd_network
+    restart: unless-stopped
+
+  # Frontend Employee (Flutter Web) - Nginx serving static files
+  frontend-employee:
+    build:
+      context: ./frontend-employee
+      dockerfile: Dockerfile
+    container_name: mvd_frontend_employee
+    ports:
+      - "4000:80"
+    networks:
+      - mvd_network
+    restart: unless-stopped
+
+networks:
+  mvd_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+
+# Примечание: Для полноценной работы Docker потребуются Dockerfile в папках backend и frontend
+# 
+# backend/Dockerfile:
+# FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+# WORKDIR /app
+# EXPOSE 5029
+# 
+# FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+# WORKDIR /src
+# COPY . .
+# RUN dotnet restore
+# RUN dotnet build -c Release -o /app/build
+# 
+# FROM build AS publish
+# RUN dotnet publish -c Release -o /app/publish
+# 
+# FROM base AS final
+# WORKDIR /app
+# COPY --from=publish /app/publish .
+# ENTRYPOINT ["dotnet", "MvdBackend.dll"]
+#
+# frontend-user/Dockerfile и frontend-employee/Dockerfile:
+# FROM debian:latest AS build-env
+# RUN apt-get update && apt-get install -y curl git wget unzip
+# RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
+# ENV PATH="/usr/local/flutter/bin:${PATH}"
+# WORKDIR /app
+# COPY . .
+# RUN flutter pub get
+# RUN flutter build web --release
+# 
+# FROM nginx:alpine
+# COPY --from=build-env /app/build/web /usr/share/nginx/html
+# EXPOSE 80
+# CMD ["nginx", "-g", "daemon off;"]
+

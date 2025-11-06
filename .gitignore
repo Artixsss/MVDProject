@@ -1,0 +1,144 @@
+# MVD Project - Common .gitignore
+
+## OS Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+## IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+## Logs
+*.log
+logs/
+*.log.*
+
+# ===========================================
+# BACKEND (.NET / C#)
+# ===========================================
+
+## Build results
+backend/bin/
+backend/obj/
+backend/out/
+backend/build/
+bin/
+obj/
+.vs/
+
+## User-specific files
+backend/*.suo
+backend/*.user
+backend/*.userosscache
+backend/*.sln.docstates
+
+## NuGet
+backend/*.nupkg
+backend/*.snupkg
+backend/.nuget/
+backend/packages/
+
+## Test Results
+backend/[Tt]est[Rr]esult*/
+backend/[Bb]uild[Ll]og.*
+
+## .NET Core
+backend/project.lock.json
+backend/project.fragment.lock.json
+backend/artifacts/
+
+## Entity Framework
+# Миграции нужны в репозитории
+# backend/Migrations/
+
+## Secrets
+backend/appsettings.Development.json
+backend/appsettings.Local.json
+*.pfx
+*.p12
+
+# ===========================================
+# FRONTEND (Flutter / Dart)
+# ===========================================
+
+## Flutter/Dart/Pub related
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/build/
+
+## IntelliJ related
+**/*.iml
+**/*.ipr
+**/*.iws
+**/.idea/
+
+## VS Code
+**/.vscode/
+
+## Miscellaneous
+**/*.class
+**/*.lock
+**/*.pyc
+**/*.swp
+**/.DS_Store
+**/.atom/
+**/.buildlog/
+**/.history
+**/.svn/
+
+## Exceptions to above rules
+!**/.vscode/launch.json
+!**/.vscode/extensions.json
+
+## Coverage
+**/coverage/
+
+## Symbols
+**/app.*.symbols
+
+## Web specific
+**/web/flutter_service_worker.js
+
+## Build outputs
+**/build/web/
+**/build/windows/
+**/build/linux/
+**/build/macos/
+
+# ===========================================
+# DATABASE
+# ===========================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ===========================================
+# DOCKER
+# ===========================================
+docker-compose.override.yml
+.env
+
+# ===========================================
+# DOCUMENTATION
+# ===========================================
+docs/temp/
+*.tmp
+
+# ===========================================
+# GENERAL
+# ===========================================
+node_modules/
+.env
+.env.local
+.env.*.local
+secrets/
+*.key
+
