@@ -15,12 +15,12 @@ class CheckStatusScreen extends StatefulWidget {
 class _CheckStatusScreenState extends State<CheckStatusScreen> {
   final _api = ApiService();
   final _requestNumberController = TextEditingController();
-  
+
   bool _loading = false;
   CitizenRequestDto? _request;
   String? _error;
   Timer? _autoRefreshTimer;
-  
+
   List<Map<String, dynamic>> _statuses = [];
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _requestTypes = [];
@@ -95,13 +95,13 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
     try {
       final request = await _api.getRequestByNumber(requestNumber);
       if (!mounted) return;
-      
+
       setState(() {
         _request = request;
         _error = null;
         _loading = false;
       });
-      
+
       _startAutoRefresh();
     } catch (e) {
       if (!mounted) return;
@@ -128,7 +128,10 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
           TextButton.icon(
             onPressed: () => context.go('/complaint'),
             icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text('Подать обращение', style: TextStyle(color: Colors.white)),
+            label: const Text(
+              'Подать обращение',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -256,7 +259,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   Card(
                     elevation: 4,
                     child: Padding(
@@ -271,56 +274,57 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                             isMono: true,
                           ),
                           const SizedBox(height: 20),
-                          
+
                           // Статус с цветом
                           _buildStatusCard(),
                           const SizedBox(height: 20),
-                          
+
                           // Основная информация
                           _buildSectionHeader('Основная информация'),
                           const SizedBox(height: 16),
-                          
+
                           _buildInfoRow(
                             'Категория:',
                             _getCategoryName(_request!.categoryId),
                           ),
                           const SizedBox(height: 12),
-                          
+
                           _buildInfoRow(
                             'Тип обращения:',
                             _getRequestTypeName(_request!.requestTypeId),
                           ),
                           const SizedBox(height: 12),
-                          
+
                           _buildInfoRow(
                             'Дата создания:',
                             _formatDate(_request!.createdAt),
                           ),
                           const SizedBox(height: 12),
-                          
+
                           _buildInfoRow(
                             'Дата инцидента:',
                             _formatDate(_request!.incidentTime),
                           ),
                           const SizedBox(height: 20),
-                          
+
                           // Адреса
                           _buildSectionHeader('Адреса'),
                           const SizedBox(height: 16),
-                          
+
                           _buildInfoRow(
                             'Адрес инцидента:',
                             _request!.incidentLocation,
                           ),
                           const SizedBox(height: 12),
-                          
-                          if (_request!.citizenLocation.isNotEmpty && _request!.citizenLocation != 'Не указан')
+
+                          if (_request!.citizenLocation.isNotEmpty &&
+                              _request!.citizenLocation != 'Не указан')
                             _buildInfoRow(
                               'Адрес регистрации:',
                               _request!.citizenLocation,
                             ),
                           const SizedBox(height: 20),
-                          
+
                           // Описание
                           if (_request!.description.isNotEmpty) ...[
                             _buildSectionHeader('Описание'),
@@ -338,19 +342,21 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                             ),
                             const SizedBox(height: 20),
                           ],
-                          
+
                           // AI-анализ (если есть)
-                          if (_request!.aiAnalyzedAt != null || _request!.aiSummary != null || _request!.aiPriority != null) ...[
+                          if (_request!.aiAnalyzedAt != null ||
+                              _request!.aiSummary != null ||
+                              _request!.aiPriority != null) ...[
                             _buildSectionHeader('AI-анализ'),
                             const SizedBox(height: 16),
-                            
+
                             // Категория, определенная AI
                             if (_request!.aiCategory != null)
                               _buildInfoRow(
                                 'Категория (AI):',
                                 _request!.aiCategory!,
                               ),
-                            
+
                             // Приоритет
                             if (_request!.aiPriority != null) ...[
                               const SizedBox(height: 12),
@@ -360,7 +366,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                                 color: _getPriorityColor(_request!.aiPriority!),
                               ),
                             ],
-                            
+
                             // Тональность
                             if (_request!.aiSentiment != null) ...[
                               const SizedBox(height: 12),
@@ -369,7 +375,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                                 _request!.aiSentiment!,
                               ),
                             ],
-                            
+
                             // Резюме
                             if (_request!.aiSummary != null) ...[
                               const SizedBox(height: 12),
@@ -386,17 +392,17 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.blue.shade50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.blue.shade200),
+                                  border: Border.all(
+                                    color: Colors.blue.shade200,
+                                  ),
                                 ),
                                 child: Text(
                                   _request!.aiSummary!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                  ),
+                                  style: const TextStyle(fontSize: 14),
                                 ),
                               ),
                             ],
-                            
+
                             // Рекомендуемые действия
                             if (_request!.aiSuggestedAction != null) ...[
                               const SizedBox(height: 12),
@@ -413,17 +419,17 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.green.shade50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.green.shade200),
+                                  border: Border.all(
+                                    color: Colors.green.shade200,
+                                  ),
                                 ),
                                 child: Text(
                                   _request!.aiSuggestedAction!,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                  ),
+                                  style: const TextStyle(fontSize: 14),
                                 ),
                               ),
                             ],
-                            
+
                             // Дата анализа
                             if (_request!.aiAnalyzedAt != null) ...[
                               const SizedBox(height: 12),
@@ -432,7 +438,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                                 _formatDate(_request!.aiAnalyzedAt!),
                               ),
                             ],
-                            
+
                             const SizedBox(height: 20),
                           ],
                         ],
@@ -440,7 +446,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Информационное сообщение
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -501,10 +507,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
           width: 150,
           child: Text(
             label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
         Expanded(
@@ -526,7 +529,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
   Widget _buildStatusCard() {
     final statusName = _getStatusName(_request!.requestStatusId);
     final statusColor = _getStatusColor(_request!.requestStatusId);
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -548,10 +551,7 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
               children: [
                 const Text(
                   'Статус обращения:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -600,11 +600,13 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
     final statusName = _getStatusName(statusId).toLowerCase();
     if (statusName.contains('новое') || statusName.contains('нов')) {
       return Colors.blue;
-    } else if (statusName.contains('работа') || statusName.contains('обработ')) {
+    } else if (statusName.contains('работа') ||
+        statusName.contains('обработ')) {
       return Colors.orange;
     } else if (statusName.contains('проверк')) {
       return Colors.purple;
-    } else if (statusName.contains('выполнено') || statusName.contains('закрыт')) {
+    } else if (statusName.contains('выполнено') ||
+        statusName.contains('закрыт')) {
       return Colors.green;
     } else if (statusName.contains('отклонен')) {
       return Colors.red;
@@ -616,11 +618,13 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
     final statusName = _getStatusName(statusId).toLowerCase();
     if (statusName.contains('новое') || statusName.contains('нов')) {
       return Icons.new_releases;
-    } else if (statusName.contains('работа') || statusName.contains('обработ')) {
+    } else if (statusName.contains('работа') ||
+        statusName.contains('обработ')) {
       return Icons.work;
     } else if (statusName.contains('проверк')) {
       return Icons.verified;
-    } else if (statusName.contains('выполнено') || statusName.contains('закрыт')) {
+    } else if (statusName.contains('выполнено') ||
+        statusName.contains('закрыт')) {
       return Icons.check_circle;
     } else if (statusName.contains('отклонен')) {
       return Icons.cancel;
@@ -660,8 +664,10 @@ class _CheckStatusScreenState extends State<CheckStatusScreen> {
   String _formatDate(String isoDate) {
     final date = DateTime.tryParse(isoDate);
     if (date == null) return isoDate;
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} '
-        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+
+    final novosibirskTime = date.toUtc().add(const Duration(hours: 7));
+
+    return '${novosibirskTime.day.toString().padLeft(2, '0')}.${novosibirskTime.month.toString().padLeft(2, '0')}.${novosibirskTime.year} '
+        '${novosibirskTime.hour.toString().padLeft(2, '0')}:${novosibirskTime.minute.toString().padLeft(2, '0')}';
   }
 }
-

@@ -109,7 +109,7 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = response.data;
         _logger.d('GetCitizenRequests response: ${data.runtimeType}');
-        
+
         if (data is List) {
           _logger.d('Found ${data.length} requests');
           final requests = data
@@ -133,7 +133,9 @@ class ApiService {
       _logger.w('Unexpected status code: ${response.statusCode}');
       return [];
     } on DioException catch (e) {
-      _logger.e('Get requests error: ${e.message} | Status: ${e.response?.statusCode}');
+      _logger.e(
+        'Get requests error: ${e.message} | Status: ${e.response?.statusCode}',
+      );
       if (e.response?.statusCode == 404) {
         _logger.d('No requests found (404)');
         return [];
@@ -237,10 +239,12 @@ class ApiService {
     try {
       await _dio.patch(
         '/api/citizenrequests/$id/correct-category',
-        data: {'category': category},
+        data: '"$category"', // JSON строка в кавычках
+        options: Options(headers: {'Content-Type': 'application/json'}),
       );
     } on DioException catch (e) {
       _logger.e('Correct AI category error: ${e.message}');
+      _logger.e('Response data: ${e.response?.data}');
       throw Exception('Не удалось скорректировать категорию: ${e.message}');
     }
   }
@@ -265,9 +269,7 @@ class ApiService {
       final response = await _dio.get(
         '/api/citizenrequests/by-number/$requestNumber',
       );
-      return CitizenRequestDto.fromJson(
-        response.data as Map<String, dynamic>,
-      );
+      return CitizenRequestDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _logger.e('Get request by number error: ${e.message}');
       throw Exception('Обращение не найдено: ${e.message}');
@@ -305,7 +307,9 @@ class ApiService {
       _logger.d('AI stats response: ${response.data}');
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
-      _logger.e('Get AI stats error: ${e.message} | Status: ${e.response?.statusCode}');
+      _logger.e(
+        'Get AI stats error: ${e.message} | Status: ${e.response?.statusCode}',
+      );
       if (e.response?.statusCode == 500) {
         _logger.e('Server error details: ${e.response?.data}');
       }
@@ -317,7 +321,9 @@ class ApiService {
   }
 
   // Lookups with caching
-  Future<List<Map<String, dynamic>>> getCategories({bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> getCategories({
+    bool forceRefresh = false,
+  }) async {
     if (!forceRefresh) {
       final cached = await _cache.getCachedCategories();
       if (cached != null && cached.isNotEmpty) {
@@ -331,7 +337,7 @@ class ApiService {
       final categories = (response.data as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .toList();
-      
+
       if (categories.isNotEmpty) {
         await _cache.cacheCategories(categories);
       }
@@ -344,7 +350,9 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getRequestTypes({bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> getRequestTypes({
+    bool forceRefresh = false,
+  }) async {
     if (!forceRefresh) {
       final cached = await _cache.getCachedRequestTypes();
       if (cached != null && cached.isNotEmpty) {
@@ -357,7 +365,7 @@ class ApiService {
       final types = (response.data as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .toList();
-      
+
       if (types.isNotEmpty) {
         await _cache.cacheRequestTypes(types);
       }
@@ -369,7 +377,9 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getRequestStatuses({bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> getRequestStatuses({
+    bool forceRefresh = false,
+  }) async {
     if (!forceRefresh) {
       final cached = await _cache.getCachedStatuses();
       if (cached != null && cached.isNotEmpty) {
@@ -382,7 +392,7 @@ class ApiService {
       final statuses = (response.data as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .toList();
-      
+
       if (statuses.isNotEmpty) {
         await _cache.cacheStatuses(statuses);
       }
@@ -394,7 +404,9 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getEmployees({bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> getEmployees({
+    bool forceRefresh = false,
+  }) async {
     if (!forceRefresh) {
       final cached = await _cache.getCachedEmployees();
       if (cached != null && cached.isNotEmpty) {
@@ -407,7 +419,7 @@ class ApiService {
       final employees = (response.data as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .toList();
-      
+
       if (employees.isNotEmpty) {
         await _cache.cacheEmployees(employees);
       }
@@ -419,7 +431,9 @@ class ApiService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getDistricts({bool forceRefresh = false}) async {
+  Future<List<Map<String, dynamic>>> getDistricts({
+    bool forceRefresh = false,
+  }) async {
     if (!forceRefresh) {
       final cached = await _cache.getCachedDistricts();
       if (cached != null && cached.isNotEmpty) {
@@ -432,7 +446,7 @@ class ApiService {
       final districts = (response.data as List<dynamic>)
           .cast<Map<String, dynamic>>()
           .toList();
-      
+
       if (districts.isNotEmpty) {
         await _cache.cacheDistricts(districts);
       }
@@ -447,10 +461,7 @@ class ApiService {
   // CRUD Operations
   Future<Map<String, dynamic>> createCategory(String name) async {
     try {
-      final response = await _dio.post(
-        '/api/categories',
-        data: {'name': name},
-      );
+      final response = await _dio.post('/api/categories', data: {'name': name});
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       _logger.e('Create category error: ${e.message}');
@@ -460,10 +471,7 @@ class ApiService {
 
   Future<void> updateCategory(int id, String name) async {
     try {
-      await _dio.put(
-        '/api/categories/$id',
-        data: {'name': name},
-      );
+      await _dio.put('/api/categories/$id', data: {'name': name});
     } on DioException catch (e) {
       _logger.e('Update category error: ${e.message}');
       throw Exception('Не удалось обновить категорию: ${e.message}');
@@ -494,10 +502,7 @@ class ApiService {
 
   Future<void> updateRequestType(int id, String name) async {
     try {
-      await _dio.put(
-        '/api/requesttypes/$id',
-        data: {'name': name},
-      );
+      await _dio.put('/api/requesttypes/$id', data: {'name': name});
     } on DioException catch (e) {
       _logger.e('Update request type error: ${e.message}');
       throw Exception('Не удалось обновить тип обращения: ${e.message}');
@@ -528,10 +533,7 @@ class ApiService {
 
   Future<void> updateRequestStatus(int id, String name) async {
     try {
-      await _dio.put(
-        '/api/requeststatuses/$id',
-        data: {'name': name},
-      );
+      await _dio.put('/api/requeststatuses/$id', data: {'name': name});
     } on DioException catch (e) {
       _logger.e('Update request status error: ${e.message}');
       throw Exception('Не удалось обновить статус: ${e.message}');
@@ -600,10 +602,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createDistrict(String name) async {
     try {
-      final response = await _dio.post(
-        '/api/districts',
-        data: {'name': name},
-      );
+      final response = await _dio.post('/api/districts', data: {'name': name});
       return response.data as Map<String, dynamic>;
     } on DioException catch (e) {
       _logger.e('Create district error: ${e.message}');
@@ -613,10 +612,7 @@ class ApiService {
 
   Future<void> updateDistrict(int id, String name) async {
     try {
-      await _dio.put(
-        '/api/districts/$id',
-        data: {'name': name},
-      );
+      await _dio.put('/api/districts/$id', data: {'name': name});
     } on DioException catch (e) {
       _logger.e('Update district error: ${e.message}');
       throw Exception('Не удалось обновить район: ${e.message}');
@@ -659,9 +655,7 @@ class ApiService {
           'addressdetails': 1,
           'limit': 10,
         },
-        options: Options(
-          headers: {'User-Agent': 'MVD-Frontend-App'},
-        ),
+        options: Options(headers: {'User-Agent': 'MVD-Frontend-App'}),
       );
       return (response.data as List<dynamic>)
           .cast<Map<String, dynamic>>()
@@ -705,9 +699,7 @@ class ApiService {
           'longitude': longitude,
         },
       );
-      return CitizenRequestDto.fromJson(
-        response.data as Map<String, dynamic>,
-      );
+      return CitizenRequestDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       _logger.e('Submit new request error: ${e.message}');
       throw Exception('Не удалось подать обращение: ${e.message}');

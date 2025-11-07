@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
 import '../models/citizen_request.dart';
+import 'package:flutter/services.dart';
 
 /// Публичный экран для граждан - подача обращений без авторизации
 class CitizenComplaintScreen extends StatefulWidget {
@@ -32,15 +33,15 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
   int? _selectedCategoryId;
   int? _selectedRequestTypeId;
   DateTime _incidentTime = DateTime.now();
-  
+
   List<Map<String, dynamic>> _categories = [];
   List<Map<String, dynamic>> _requestTypes = [];
-  
+
   bool _loading = false;
   bool _showMap = false;
   LatLng? _selectedLocation;
   String? _detectedDistrict;
-  
+
   final MapController _mapController = MapController();
   static const LatLng _novosibirskCenter = LatLng(55.0302, 82.9204);
 
@@ -48,7 +49,8 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
   Timer? _autocompleteTimer;
   List<String> _addressSuggestions = [];
   bool _showSuggestions = false;
-  bool _isIncidentField = true; // true для адреса инцидента, false для адреса регистрации
+  bool _isIncidentField =
+      true; // true для адреса инцидента, false для адреса регистрации
 
   @override
   void initState() {
@@ -56,6 +58,19 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     _loadLookups();
     _incidentLocationController.addListener(_onIncidentAddressChanged);
     _citizenLocationController.addListener(_onCitizenAddressChanged);
+  }
+
+  void _copyToClipboard(String text, BuildContext context) {
+    Clipboard.setData(ClipboardData(text: text));
+
+    // Показываем подтверждение копирования
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Номер обращения скопирован: $text'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   @override
@@ -75,7 +90,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     _autocompleteTimer?.cancel();
     _autocompleteTimer = Timer(const Duration(milliseconds: 500), () {
       if (_incidentLocationController.text.trim().length >= 3) {
-        _loadAddressSuggestions(_incidentLocationController.text, isIncident: true);
+        _loadAddressSuggestions(
+          _incidentLocationController.text,
+          isIncident: true,
+        );
       } else {
         setState(() {
           _showSuggestions = false;
@@ -89,7 +107,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     _autocompleteTimer?.cancel();
     _autocompleteTimer = Timer(const Duration(milliseconds: 500), () {
       if (_citizenLocationController.text.trim().length >= 3) {
-        _loadAddressSuggestions(_citizenLocationController.text, isIncident: false);
+        _loadAddressSuggestions(
+          _citizenLocationController.text,
+          isIncident: false,
+        );
       } else {
         setState(() {
           _showSuggestions = false;
@@ -99,11 +120,14 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     });
   }
 
-  Future<void> _loadAddressSuggestions(String query, {required bool isIncident}) async {
+  Future<void> _loadAddressSuggestions(
+    String query, {
+    required bool isIncident,
+  }) async {
     try {
       final suggestions = await _api.autocompleteAddress(query);
       if (!mounted) return;
-      
+
       setState(() {
         _addressSuggestions = suggestions;
         _showSuggestions = suggestions.isNotEmpty && query.trim().isNotEmpty;
@@ -118,18 +142,21 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     }
   }
 
-  Future<void> _onAddressSelected(String address, {required bool isIncident}) async {
+  Future<void> _onAddressSelected(
+    String address, {
+    required bool isIncident,
+  }) async {
     // Геокодируем адрес для получения координат
     setState(() => _loading = true);
     try {
       final results = await _api.searchAddress(address);
       if (!mounted) return;
-      
+
       if (results.isNotEmpty && isIncident) {
         final first = results.first;
         final lat = double.tryParse(first['lat']?.toString() ?? '');
         final lon = double.tryParse(first['lon']?.toString() ?? '');
-        
+
         if (lat != null && lon != null) {
           setState(() {
             _selectedLocation = LatLng(lat, lon);
@@ -188,12 +215,15 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
       _showMap = true;
       _loading = true;
     });
-    
+
     // Обратное геокодирование для получения адреса
     try {
-      final address = await _api.reverseGeocode(point.latitude, point.longitude);
+      final address = await _api.reverseGeocode(
+        point.latitude,
+        point.longitude,
+      );
       if (!mounted) return;
-      
+
       if (address != null) {
         _incidentLocationController.text = address;
       }
@@ -213,7 +243,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
       _showSuggestions = false;
       _addressSuggestions = [];
     });
-    
+
     if (!_formKey.currentState!.validate()) {
       _showError('Пожалуйста, заполните все обязательные поля');
       return;
@@ -254,10 +284,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
       );
 
       if (!mounted) return;
-      
+
       // Ждем немного, чтобы AI успел проанализировать
       await Future.delayed(const Duration(seconds: 3));
-      
+
       // Получаем полные данные обращения с AI-анализом
       CitizenRequestDto? fullRequest;
       try {
@@ -265,7 +295,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
       } catch (e) {
         // Если не удалось получить, показываем без AI-анализа
       }
-      
+
       // Показываем диалог с номером обращения и AI-анализом
       _showSuccessDialog(result.requestNumber, fullRequest);
     } catch (e) {
@@ -275,7 +305,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     }
   }
 
-  void _showSuccessDialog(String requestNumber, [CitizenRequestDto? fullRequest]) {
+  void _showSuccessDialog(
+    String requestNumber, [
+    CitizenRequestDto? fullRequest,
+  ]) {
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -311,14 +344,28 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  SelectableText(
-                    requestNumber,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'monospace',
-                      color: Colors.blue,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SelectableText(
+                          requestNumber,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                            color: Colors.blue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.content_copy, size: 20),
+                        onPressed: () {
+                          _copyToClipboard(requestNumber, ctx);
+                        },
+                        tooltip: 'Скопировать номер',
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -328,9 +375,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
               'Сохраните этот номер! С его помощью вы сможете отследить статус вашего обращения.',
               style: TextStyle(fontSize: 14, color: Colors.black54),
             ),
-            
+
             // AI-анализ (если доступен)
-            if (fullRequest != null && (fullRequest.aiSummary != null || fullRequest.aiPriority != null)) ...[
+            if (fullRequest != null &&
+                (fullRequest.aiSummary != null ||
+                    fullRequest.aiPriority != null)) ...[
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -344,7 +393,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.auto_awesome, color: Colors.purple.shade700, size: 20),
+                        Icon(
+                          Icons.auto_awesome,
+                          color: Colors.purple.shade700,
+                          size: 20,
+                        ),
                         const SizedBox(width: 8),
                         const Text(
                           'AI-анализ обращения',
@@ -436,7 +489,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Подать обращение'),
@@ -447,7 +500,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
           TextButton.icon(
             onPressed: () => context.go('/check-status'),
             icon: const Icon(Icons.search, color: Colors.white),
-            label: const Text('Проверить статус', style: TextStyle(color: Colors.white)),
+            label: const Text(
+              'Проверить статус',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -487,60 +543,76 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         const SizedBox(height: 8),
                         Text(
                           'Поля, отмеченные * являются обязательными',
-                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
                         ),
                         const SizedBox(height: 16),
-                        
+
                         _buildTextField(
                           controller: _lastNameController,
                           label: 'Фамилия *',
                           icon: Icons.person,
                           validator: (v) {
-                            if (v?.trim().isEmpty ?? true) return 'Введите фамилию';
-                            if (v!.trim().length < 2) return 'Минимум 2 символа';
-                            if (v.trim().length > 100) return 'Максимум 100 символов';
+                            if (v?.trim().isEmpty ?? true)
+                              return 'Введите фамилию';
+                            if (v!.trim().length < 2)
+                              return 'Минимум 2 символа';
+                            if (v.trim().length > 100)
+                              return 'Максимум 100 символов';
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         _buildTextField(
                           controller: _firstNameController,
                           label: 'Имя *',
                           icon: Icons.person_outline,
                           validator: (v) {
                             if (v?.trim().isEmpty ?? true) return 'Введите имя';
-                            if (v!.trim().length < 2) return 'Минимум 2 символа';
-                            if (v.trim().length > 100) return 'Максимум 100 символов';
+                            if (v!.trim().length < 2)
+                              return 'Минимум 2 символа';
+                            if (v.trim().length > 100)
+                              return 'Максимум 100 символов';
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         _buildTextField(
                           controller: _middleNameController,
                           label: 'Отчество',
                           icon: Icons.person_outline,
                           helperText: 'Необязательное поле',
                           validator: (v) {
-                            if (v != null && v.trim().isNotEmpty && v.trim().length > 100) {
+                            if (v != null &&
+                                v.trim().isNotEmpty &&
+                                v.trim().length > 100) {
                               return 'Максимум 100 символов';
                             }
                             return null;
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         _buildTextField(
                           controller: _phoneController,
                           label: 'Телефон *',
                           icon: Icons.phone,
                           keyboardType: TextInputType.phone,
                           validator: (v) {
-                            if (v?.trim().isEmpty ?? true) return 'Введите номер телефона';
-                            final phone = v!.trim().replaceAll(RegExp(r'[^\d+]'), '');
-                            if (phone.length < 10) return 'Введите корректный номер';
-                            if (phone.length > 20) return 'Номер слишком длинный';
+                            if (v?.trim().isEmpty ?? true)
+                              return 'Введите номер телефона';
+                            final phone = v!.trim().replaceAll(
+                              RegExp(r'[^\d+]'),
+                              '',
+                            );
+                            if (phone.length < 10)
+                              return 'Введите корректный номер';
+                            if (phone.length > 20)
+                              return 'Номер слишком длинный';
                             return null;
                           },
                         ),
@@ -557,21 +629,27 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                             labelText: 'Категория обращения',
                             prefixIcon: const Icon(Icons.category),
                             border: const OutlineInputBorder(),
-                            helperText: 'Опционально. Нейросеть определит категорию автоматически на основе описания',
+                            helperText:
+                                'Опционально. Нейросеть определит категорию автоматически на основе описания',
                           ),
                           items: [
                             const DropdownMenuItem<int>(
                               value: null,
-                              child: Text('Автоматическое определение (рекомендуется)'),
+                              child: Text(
+                                'Автоматическое определение (рекомендуется)',
+                              ),
                             ),
                             ..._categories
-                                .map((c) => DropdownMenuItem<int>(
-                                      value: c['id'] as int,
-                                      child: Text(c['name']?.toString() ?? ''),
-                                    ))
+                                .map(
+                                  (c) => DropdownMenuItem<int>(
+                                    value: c['id'] as int,
+                                    child: Text(c['name']?.toString() ?? ''),
+                                  ),
+                                )
                                 .toList(),
                           ],
-                          onChanged: (v) => setState(() => _selectedCategoryId = v),
+                          onChanged: (v) =>
+                              setState(() => _selectedCategoryId = v),
                           // validator убран - категория теперь опциональна
                         ),
                         const SizedBox(height: 16),
@@ -586,35 +664,94 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                             helperText: 'Выберите тип из списка',
                           ),
                           items: _requestTypes
-                              .map((t) => DropdownMenuItem<int>(
-                                    value: t['id'] as int,
-                                    child: Text(t['name']?.toString() ?? ''),
-                                  ))
+                              .map(
+                                (t) => DropdownMenuItem<int>(
+                                  value: t['id'] as int,
+                                  child: Text(t['name']?.toString() ?? ''),
+                                ),
+                              )
                               .toList(),
-                          onChanged: (v) => setState(() => _selectedRequestTypeId = v),
+                          onChanged: (v) =>
+                              setState(() => _selectedRequestTypeId = v),
                           validator: (v) => v == null ? 'Выберите тип' : null,
                         ),
                         const SizedBox(height: 16),
 
                         // Дата и время инцидента
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.access_time),
-                          title: const Text('Дата и время инцидента *'),
-                          subtitle: Text(
-                            _formatDateTime(_incidentTime),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D47A1),
+                        Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time,
+                                      color: Color(0xFF0D47A1),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Дата и время инцидента *',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Выбрано:',
+                                            style: TextStyle(
+                                              color: Colors.grey.shade600,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            _formatDateTime(_incidentTime),
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Color(0xFF0D47A1),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    FilledButton.icon(
+                                      onPressed: _pickDateTime,
+                                      icon: const Icon(Icons.edit),
+                                      label: const Text('Изменить'),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFF0D47A1,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Нажмите "Изменить" чтобы выбрать другую дату и время',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          trailing: FilledButton.icon(
-                            onPressed: _pickDateTime,
-                            icon: const Icon(Icons.calendar_today),
-                            label: const Text('Изменить'),
-                          ),
                         ),
-                        const SizedBox(height: 16),
 
                         // Адрес инцидента с автодополнением и картой
                         Column(
@@ -624,56 +761,78 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                               controller: _incidentLocationController,
                               label: 'Адрес инцидента *',
                               icon: Icons.location_on,
-                              helperText: 'Начните вводить адрес или выберите на карте',
-                              validator: (v) =>
-                                  v?.trim().isEmpty ?? true ? 'Введите адрес инцидента' : null,
+                              helperText:
+                                  'Начните вводить адрес или выберите на карте',
+                              validator: (v) => v?.trim().isEmpty ?? true
+                                  ? 'Введите адрес инцидента'
+                                  : null,
                               suffix: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.map),
-                                  onPressed: () {
-                                    setState(() {
-                                      _showMap = !_showMap;
-                                      _showSuggestions = false;
-                                      if (_showMap && _selectedLocation == null) {
-                                        _selectedLocation = _novosibirskCenter;
-                                      }
-                                    });
-                                    // Перемещаем карту после того, как она отрендерится
-                                    if (_showMap) {
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                                        final location = _selectedLocation ?? _novosibirskCenter;
-                                        try {
-                                          _mapController.move(location, 11);
-                                        } catch (e) {
-                                          // Карта еще не готова, попробуем еще раз через небольшую задержку
-                                          Future.delayed(const Duration(milliseconds: 100), () {
-                                            if (mounted) {
-                                              try {
-                                                _mapController.move(location, 11);
-                                              } catch (_) {
-                                                // Игнорируем ошибки
-                                              }
-                                            }
-                                          });
+                                    onPressed: () {
+                                      setState(() {
+                                        _showMap = !_showMap;
+                                        _showSuggestions = false;
+                                        if (_showMap &&
+                                            _selectedLocation == null) {
+                                          _selectedLocation =
+                                              _novosibirskCenter;
                                         }
                                       });
-                                    }
-                                  },
+                                      // Перемещаем карту после того, как она отрендерится
+                                      if (_showMap) {
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                              final location =
+                                                  _selectedLocation ??
+                                                  _novosibirskCenter;
+                                              try {
+                                                _mapController.move(
+                                                  location,
+                                                  11,
+                                                );
+                                              } catch (e) {
+                                                // Карта еще не готова, попробуем еще раз через небольшую задержку
+                                                Future.delayed(
+                                                  const Duration(
+                                                    milliseconds: 100,
+                                                  ),
+                                                  () {
+                                                    if (mounted) {
+                                                      try {
+                                                        _mapController.move(
+                                                          location,
+                                                          11,
+                                                        );
+                                                      } catch (_) {
+                                                        // Игнорируем ошибки
+                                                      }
+                                                    }
+                                                  },
+                                                );
+                                              }
+                                            });
+                                      }
+                                    },
                                     tooltip: 'Показать карту',
                                   ),
                                 ],
                               ),
                             ),
                             // Автодополнение для адреса инцидента
-                            if (_showSuggestions && _isIncidentField && _addressSuggestions.isNotEmpty)
+                            if (_showSuggestions &&
+                                _isIncidentField &&
+                                _addressSuggestions.isNotEmpty)
                               Container(
                                 margin: const EdgeInsets.only(top: 4),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.1),
@@ -682,22 +841,33 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                     ),
                                   ],
                                 ),
-                                constraints: const BoxConstraints(maxHeight: 200),
+                                constraints: const BoxConstraints(
+                                  maxHeight: 200,
+                                ),
                                 child: ListView.builder(
                                   shrinkWrap: true,
                                   itemCount: _addressSuggestions.length,
                                   itemBuilder: (context, index) {
-                                    final suggestion = _addressSuggestions[index];
+                                    final suggestion =
+                                        _addressSuggestions[index];
                                     return ListTile(
                                       dense: true,
-                                      leading: const Icon(Icons.location_on, size: 20, color: Color(0xFF0D47A1)),
+                                      leading: const Icon(
+                                        Icons.location_on,
+                                        size: 20,
+                                        color: Color(0xFF0D47A1),
+                                      ),
                                       title: Text(
                                         suggestion,
                                         style: const TextStyle(fontSize: 14),
                                       ),
                                       onTap: () {
-                                        _incidentLocationController.text = suggestion;
-                                        _onAddressSelected(suggestion, isIncident: true);
+                                        _incidentLocationController.text =
+                                            suggestion;
+                                        _onAddressSelected(
+                                          suggestion,
+                                          isIncident: true,
+                                        );
                                         setState(() {
                                           _showSuggestions = false;
                                           _addressSuggestions = [];
@@ -710,7 +880,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        
+
                         // Карта для выбора места
                         if (_showMap)
                           Card(
@@ -727,8 +897,12 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                     child: FlutterMap(
                                       mapController: _mapController,
                                       options: MapOptions(
-                                        initialCenter: _selectedLocation ?? _novosibirskCenter,
-                                        initialZoom: _selectedLocation != null ? 15 : 11,
+                                        initialCenter:
+                                            _selectedLocation ??
+                                            _novosibirskCenter,
+                                        initialZoom: _selectedLocation != null
+                                            ? 15
+                                            : 11,
                                         onTap: _onMapTap,
                                       ),
                                       children: [
@@ -736,7 +910,8 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                           urlTemplate:
                                               'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                                           subdomains: const ['a', 'b', 'c'],
-                                          userAgentPackageName: 'mvd.frontend.app',
+                                          userAgentPackageName:
+                                              'mvd.frontend.app',
                                         ),
                                         if (_selectedLocation != null)
                                           MarkerLayer(
@@ -761,12 +936,19 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                   padding: const EdgeInsets.all(8.0),
                                   child: Row(
                                     children: [
-                                      const Icon(Icons.info_outline, size: 16, color: Colors.blue),
+                                      const Icon(
+                                        Icons.info_outline,
+                                        size: 16,
+                                        color: Colors.blue,
+                                      ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
                                           'Нажмите на карте, чтобы выбрать место происшествия',
-                                          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade700,
+                                          ),
                                         ),
                                       ),
                                       TextButton(
@@ -781,7 +963,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                               ],
                             ),
                           ),
-                        
+
                         const SizedBox(height: 16),
 
                         // Адрес гражданина с автодополнением
@@ -792,17 +974,22 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                               controller: _citizenLocationController,
                               label: 'Адрес регистрации',
                               icon: Icons.home,
-                              helperText: 'Необязательное поле. Начните вводить адрес для автодополнения',
+                              helperText:
+                                  'Необязательное поле. Начните вводить адрес для автодополнения',
                               validator: (v) => null, // Необязательное поле
                             ),
                             // Автодополнение для адреса регистрации
-                            if (_showSuggestions && !_isIncidentField && _addressSuggestions.isNotEmpty)
+                            if (_showSuggestions &&
+                                !_isIncidentField &&
+                                _addressSuggestions.isNotEmpty)
                               Container(
                                 margin: const EdgeInsets.only(top: 4),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                  ),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withOpacity(0.1),
@@ -811,22 +998,33 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                     ),
                                   ],
                                 ),
-                                constraints: const BoxConstraints(maxHeight: 200),
+                                constraints: const BoxConstraints(
+                                  maxHeight: 200,
+                                ),
                                 child: ListView.builder(
                                   shrinkWrap: true,
                                   itemCount: _addressSuggestions.length,
                                   itemBuilder: (context, index) {
-                                    final suggestion = _addressSuggestions[index];
+                                    final suggestion =
+                                        _addressSuggestions[index];
                                     return ListTile(
                                       dense: true,
-                                      leading: const Icon(Icons.location_on, size: 20, color: Color(0xFF0D47A1)),
+                                      leading: const Icon(
+                                        Icons.location_on,
+                                        size: 20,
+                                        color: Color(0xFF0D47A1),
+                                      ),
                                       title: Text(
                                         suggestion,
                                         style: const TextStyle(fontSize: 14),
                                       ),
                                       onTap: () {
-                                        _citizenLocationController.text = suggestion;
-                                        _onAddressSelected(suggestion, isIncident: false);
+                                        _citizenLocationController.text =
+                                            suggestion;
+                                        _onAddressSelected(
+                                          suggestion,
+                                          isIncident: false,
+                                        );
                                         setState(() {
                                           _showSuggestions = false;
                                           _addressSuggestions = [];
@@ -846,7 +1044,8 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                           label: 'Описание обращения *',
                           icon: Icons.notes,
                           maxLines: 6,
-                          helperText: 'Минимум 10 символов. Опишите подробно что произошло',
+                          helperText:
+                              'Минимум 10 символов. Опишите подробно что произошло',
                           validator: (v) {
                             if (v?.trim().isEmpty ?? true) {
                               return 'Опишите обращение';
@@ -869,10 +1068,14 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Icon(Icons.send),
-                          label: Text(_loading ? 'Отправка...' : 'Подать обращение'),
+                          label: Text(
+                            _loading ? 'Отправка...' : 'Подать обращение',
+                          ),
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.all(20),
                             textStyle: const TextStyle(fontSize: 18),
@@ -932,19 +1135,28 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
   }
 
   Future<void> _pickDateTime() async {
+    final now = DateTime.now();
+
+    // Сначала выбираем дату
     final date = await showDatePicker(
       context: context,
       initialDate: _incidentTime,
       firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
+      lastDate: now,
+      locale: const Locale('ru', 'RU'), // ДОБАВЬТЕ ЭТУ СТРОКУ
       helpText: 'Выберите дату инцидента',
+      cancelText: 'Отмена',
+      confirmText: 'Далее',
     );
     if (date == null || !mounted) return;
 
+    // Затем выбираем время
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_incidentTime),
       helpText: 'Выберите время инцидента',
+      cancelText: 'Назад',
+      confirmText: 'Готово',
     );
     if (time == null || !mounted) return;
 
@@ -967,10 +1179,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
           width: 80,
           child: Text(
             label,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ),
         Expanded(

@@ -638,7 +638,7 @@ namespace MvdBackend.Controllers
                 // Если CategoryId не указан, используем категорию "Другое" (ID=10) как временную
                 // Нейросеть определит правильную категорию в фоне
                 var defaultCategoryId = dto.CategoryId ?? 10; // "Другое" как временная категория
-                
+
                 var request = new CitizenRequest
                 {
                     CitizenId = existingCitizen.Id,
@@ -647,8 +647,8 @@ namespace MvdBackend.Controllers
                     Description = dto.Description,
                     AcceptedById = firstEmployee!.Id, // Первый сотрудник принимает
                     AssignedToId = firstEmployee.Id, // И назначается исполнителем
-                    IncidentTime = dto.IncidentTime.Kind == DateTimeKind.Utc 
-                        ? dto.IncidentTime 
+                    IncidentTime = dto.IncidentTime.Kind == DateTimeKind.Utc
+                        ? dto.IncidentTime
                         : dto.IncidentTime.ToUniversalTime(),
                     IncidentLocation = dto.IncidentLocation,
                     CitizenLocation = string.IsNullOrWhiteSpace(dto.CitizenLocation) ? "Не указан" : dto.CitizenLocation,
@@ -662,7 +662,7 @@ namespace MvdBackend.Controllers
                 {
                     request.Location = new Point(dto.Longitude.Value, dto.Latitude.Value);
                     _logger.LogInformation($"Using provided coordinates: {dto.Latitude}, {dto.Longitude}");
-                    
+
                     // Обратное геокодирование для определения района
                     var geocodeResult = await _nominatimService.GeocodeAsync(dto.IncidentLocation);
                     if (geocodeResult != null)
@@ -681,7 +681,7 @@ namespace MvdBackend.Controllers
                     if (geocodeResult != null)
                     {
                         request.Location = new Point(geocodeResult.Value.lon, geocodeResult.Value.lat);
-                        
+
                         var district = await _districtRepository.GetByNameAsync(geocodeResult.Value.district);
                         if (district != null)
                         {
@@ -711,7 +711,7 @@ namespace MvdBackend.Controllers
                 _logger.LogInformation($"RequestNumber={request.RequestNumber}, CitizenLocation='{request.CitizenLocation}', IncidentLocation='{request.IncidentLocation}'");
 
                 await _requestRepository.AddAsync(request);
-                
+
                 try
                 {
                     await _requestRepository.SaveAsync();

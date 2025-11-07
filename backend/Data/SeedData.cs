@@ -7,179 +7,113 @@ namespace MvdBackend.Data
     {
         public static void Initialize(AppDbContext context)
         {
-            // Статусы 
+            // Очистка существующих данных (опционально)
+            // context.Database.EnsureDeleted();
+            // context.Database.EnsureCreated();
+
+            // Статусы заявок
             if (!context.RequestStatuses.Any())
             {
-                context.RequestStatuses.AddRange(
-                    new RequestStatus { Name = "Новое" },
-                    new RequestStatus { Name = "В работе" },
-                    new RequestStatus { Name = "На проверке" },
-                    new RequestStatus { Name = "Выполнено" },
-                    new RequestStatus { Name = "Отклонено" }
-                );
+                var statuses = new[]
+                {
+            new RequestStatus { Name = "Новое" },
+            new RequestStatus { Name = "В работе" },
+            new RequestStatus { Name = "На проверке" },
+            new RequestStatus { Name = "Выполнено" },
+            new RequestStatus { Name = "Отклонено" }
+        };
+                context.RequestStatuses.AddRange(statuses);
                 context.SaveChanges();
             }
 
-            // Типы обращений 
+            // Типы обращений
             if (!context.RequestTypes.Any())
             {
-                context.RequestTypes.AddRange(
-                    new RequestType { Name = "Заявление о преступлении" },
-                    new RequestType { Name = "Жалоба на действия сотрудников" },
-                    new RequestType { Name = "Консультация по законодательству" },
-                    new RequestType { Name = "Запрос информации" },
-                    new RequestType { Name = "Обращение по ПДД" }
-                );
+                var types = new[]
+                {
+            new RequestType { Name = "Заявление о преступлении" },
+            new RequestType { Name = "Жалоба на действия сотрудников" },
+            new RequestType { Name = "Консультация по законодательству" },
+            new RequestType { Name = "Запрос информации" },
+            new RequestType { Name = "Обращение по ПДД" }
+        };
+                context.RequestTypes.AddRange(types);
                 context.SaveChanges();
             }
 
             // Категории
             if (!context.Categories.Any())
             {
-                context.Categories.AddRange(
-                    new Category { Name = "Имущественные преступления", Description = "Кражи, грабежи, мошенничество, вымогательство, повреждение имущества" },
-                    new Category { Name = "Транспорт и ПДД", Description = "ДТП, нарушение ПДД, опасное вождение, неправильная парковка" },
-                    new Category { Name = "Общественный порядок", Description = "Хулиганство, драки, нарушение тишины, распитие алкоголя" },
-                    new Category { Name = "Бытовые конфликты", Description = "Конфликты с соседями, шум, коммунальные проблемы" },
-                    new Category { Name = "Угрозы и безопасность", Description = "Угрозы жизни, нападения, преследование, вымогательство" },
-                    new Category { Name = "Киберпреступления", Description = "Интернет-мошенничество, взломы, кибербуллинг" },
-                    new Category { Name = "Наркотики", Description = "Распространение, употребление наркотических веществ" },
-                    new Category { Name = "Экология и животные", Description = "Свалки, загрязнение, жестокое обращение с животными" },
-                    new Category { Name = "Пропавшие люди", Description = "Поиск пропавших без вести людей" },
-                    new Category { Name = "Другое", Description = "Иные обращения, не вошедшие в категории" }
-                );
+                var categories = new[]
+                {
+            new Category { Name = "Имущественные преступления", Description = "Кражи, грабежи, мошенничество" },
+            new Category { Name = "Транспорт и ПДД", Description = "ДТП, нарушение ПДД" },
+            new Category { Name = "Общественный порядок", Description = "Хулиганство, драки" }
+        };
+                context.Categories.AddRange(categories);
+                context.SaveChanges();
+            }
+
+            // Роли
+            if (!context.Roles.Any())
+            {
+                var roles = new[]
+                {
+            new Role { Name = "Operator" },
+            new Role { Name = "Manager" },
+            new Role { Name = "Admin" }
+        };
+                context.Roles.AddRange(roles);
+                context.SaveChanges();
+            }
+
+            // Сотрудники и пользователи
+            if (!context.Employees.Any())
+            {
+                var employees = new[]
+                {
+            new Employee { LastName = "Козлов", FirstName = "Александр", Patronymic = "Сергеевич", Phone = "+79130000001" },
+            new Employee { LastName = "Никитина", FirstName = "Елена", Patronymic = "Дмитриевна", Phone = "+79130000002" },
+            new Employee { LastName = "Федоров", FirstName = "Максим", Patronymic = "Игоревич", Phone = "+79130000003" }
+        };
+                context.Employees.AddRange(employees);
+                context.SaveChanges();
+
+                // Создаем пользователей после сохранения сотрудников
+                var roles = context.Roles.ToList();
+                var users = new[]
+                {
+            new User { Username = "operator", PasswordHash = BCrypt.Net.BCrypt.HashPassword("123"), EmployeeId = employees[0].Id, RoleId = roles[0].Id },
+            new User { Username = "manager", PasswordHash = BCrypt.Net.BCrypt.HashPassword("123"), EmployeeId = employees[1].Id, RoleId = roles[1].Id },
+            new User { Username = "admin", PasswordHash = BCrypt.Net.BCrypt.HashPassword("123"), EmployeeId = employees[2].Id, RoleId = roles[2].Id }
+        };
+                context.Users.AddRange(users);
                 context.SaveChanges();
             }
 
             // Граждане
             if (!context.Citizens.Any())
             {
-                context.Citizens.AddRange(
-                    new Citizen { LastName = "Иванов", FirstName = "Иван", Patronymic = "Иванович", Phone = "+79131112233" },
-                    new Citizen { LastName = "Петров", FirstName = "Петр", Patronymic = "Петрович", Phone = "+79132223344" },
-                    new Citizen { LastName = "Сидорова", FirstName = "Анна", Patronymic = "Владимировна", Phone = "+79133334455" }
-                );
-                context.SaveChanges();
-            }
-            // Роли - создаем с явными ID для гарантии
-            Role? operatorRole = null;
-            Role? managerRole = null;
-            Role? adminRole = null;
-            
-            if (!context.Roles.Any())
-            {
-                operatorRole = new Role { Name = "Operator" };
-                managerRole = new Role { Name = "Manager" };
-                adminRole = new Role { Name = "Admin" };
-                
-                context.Roles.AddRange(operatorRole, managerRole, adminRole);
-                context.SaveChanges();
-                
-                // Перезагружаем для получения ID
-                operatorRole = context.Roles.FirstOrDefault(r => r.Name == "Operator");
-                managerRole = context.Roles.FirstOrDefault(r => r.Name == "Manager");
-                adminRole = context.Roles.FirstOrDefault(r => r.Name == "Admin");
-            }
-            else
-            {
-                operatorRole = context.Roles.FirstOrDefault(r => r.Name == "Operator");
-                managerRole = context.Roles.FirstOrDefault(r => r.Name == "Manager");
-                adminRole = context.Roles.FirstOrDefault(r => r.Name == "Admin");
-            }
-            
-            // Сотрудники - создаем с явными ID для гарантии
-            int employee1Id = 0;
-            int employee2Id = 0;
-            int employee3Id = 0;
-            
-            if (!context.Employees.Any())
-            {
-                var emp1 = new Employee { LastName = "Козлов", FirstName = "Александр", Patronymic = "Сергеевич" };
-                var emp2 = new Employee { LastName = "Никитина", FirstName = "Елена", Patronymic = "Дмитриевна" };
-                var emp3 = new Employee { LastName = "Федоров", FirstName = "Максим", Patronymic = "Игоревич" };
-                
-                context.Employees.AddRange(emp1, emp2, emp3);
-                context.SaveChanges();
-                
-                // Сохраняем ID сразу после создания
-                employee1Id = emp1.Id;
-                employee2Id = emp2.Id;
-                employee3Id = emp3.Id;
-            }
-            else
-            {
-                // Получаем ID существующих сотрудников через простой LINQ запрос (только ID, без Phone)
-                employee1Id = context.Employees
-                    .Where(e => e.LastName == "Козлов" && e.FirstName == "Александр")
-                    .Select(e => e.Id)
-                    .FirstOrDefault();
-                employee2Id = context.Employees
-                    .Where(e => e.LastName == "Никитина" && e.FirstName == "Елена")
-                    .Select(e => e.Id)
-                    .FirstOrDefault();
-                employee3Id = context.Employees
-                    .Where(e => e.LastName == "Федоров" && e.FirstName == "Максим")
-                    .Select(e => e.Id)
-                    .FirstOrDefault();
-            }
-            
-            // Пользователи (учетные записи) - используем реальные ID
-            if (!context.Users.Any())
-            {
-                if (operatorRole != null && employee1Id > 0)
+                var citizens = new[]
                 {
-                    context.Users.Add(new User 
-                    { 
-                        Username = "kozlova", 
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("operator123"), 
-                        EmployeeId = employee1Id, 
-                        RoleId = operatorRole.Id 
-                    });
-                }
-                
-                if (managerRole != null && employee2Id > 0)
-                {
-                    context.Users.Add(new User 
-                    { 
-                        Username = "nikitina", 
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("manager123"), 
-                        EmployeeId = employee2Id, 
-                        RoleId = managerRole.Id 
-                    });
-                }
-                
-                if (adminRole != null && employee3Id > 0)
-                {
-                    context.Users.Add(new User 
-                    { 
-                        Username = "fedorov", 
-                        PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"), 
-                        EmployeeId = employee3Id, 
-                        RoleId = adminRole.Id 
-                    });
-                }
-                
+            new Citizen { LastName = "Иванов", FirstName = "Иван", Patronymic = "Иванович", Phone = "+79131112233" },
+            new Citizen { LastName = "Петров", FirstName = "Петр", Patronymic = "Петрович", Phone = "+79132223344" }
+        };
+                context.Citizens.AddRange(citizens);
                 context.SaveChanges();
             }
+
             // Районы
             if (!context.Districts.Any())
             {
-                context.Districts.AddRange(
-                    new District { Name = "Центральный", Description = "Центральный район" },
-                    new District { Name = "Железнодорожный", Description = "Железнодорожный район" },
-                    new District { Name = "Заельцовский", Description = "Заельцовский район" },
-                    new District { Name = "Калининский", Description = "Калининский район" },
-                    new District { Name = "Кировский", Description = "Кировский район" },
-                    new District { Name = "Ленинский", Description = "Ленинский район" },
-                    new District { Name = "Октябрьский", Description = "Октябрьский район" },
-                    new District { Name = "Первомайский", Description = "Первомайский район" },
-                    new District { Name = "Советский", Description = "Советский район" },
-                    new District { Name = "Дзержинский", Description = "Дзержинский район" }
-                );
+                var districts = new[]
+                {
+            new District { Name = "Центральный", Description = "Центральный район" },
+            new District { Name = "Железнодорожный", Description = "Железнодорожный район" }
+        };
+                context.Districts.AddRange(districts);
                 context.SaveChanges();
             }
-           
-
         }
     }
 }

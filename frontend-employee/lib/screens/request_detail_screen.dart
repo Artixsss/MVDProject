@@ -19,7 +19,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   final _api = ApiService();
   CitizenRequestDto? _data;
   bool _loading = true;
-  
+
   Map<int, String> _categories = {};
   Map<int, String> _requestTypes = {};
   Map<int, String> _statuses = {};
@@ -42,31 +42,32 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         _api.getEmployees(),
         _api.getDistricts(),
       ]);
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _data = results[0] as CitizenRequestDto;
         _categories = {
           for (var c in results[1] as List<Map<String, dynamic>>)
-            c['id'] as int: c['name']?.toString() ?? ''
+            c['id'] as int: c['name']?.toString() ?? '',
         };
         _requestTypes = {
           for (var t in results[2] as List<Map<String, dynamic>>)
-            t['id'] as int: t['name']?.toString() ?? ''
+            t['id'] as int: t['name']?.toString() ?? '',
         };
         _statuses = {
           for (var s in results[3] as List<Map<String, dynamic>>)
-            s['id'] as int: s['name']?.toString() ?? ''
+            s['id'] as int: s['name']?.toString() ?? '',
         };
         _employees = {
           for (var e in results[4] as List<Map<String, dynamic>>)
-            e['id'] as int: 
-              '${e['lastName']} ${e['firstName']} ${e['patronymic'] ?? ''}'.trim()
+            e['id'] as int:
+                '${e['lastName']} ${e['firstName']} ${e['patronymic'] ?? ''}'
+                    .trim(),
         };
         _districts = {
           for (var d in results[5] as List<Map<String, dynamic>>)
-            d['id'] as int: d['name']?.toString() ?? ''
+            d['id'] as int: d['name']?.toString() ?? '',
         };
         _loading = false;
       });
@@ -123,231 +124,246 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _data == null
-              ? const Center(child: Text('Не найдено'))
-              : RefreshIndicator(
-                  onRefresh: _reload,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Основная информация
-                        _buildSection(
-                          'Основная информация',
-                          Icons.info_outline,
-                          [
-                            _buildInfoRow('Номер обращения', _data!.requestNumber, isMono: true),
-                            _buildInfoRow('Тип', _requestTypes[_data!.requestTypeId] ?? '—'),
-                            _buildInfoRow('Категория', _categories[_data!.categoryId] ?? '—'),
-                            _buildInfoRow(
-                              'Статус',
-                              _statuses[_data!.requestStatusId] ?? '—',
-                              chip: _buildStatusChip(_data!.requestStatusId),
+          ? const Center(child: Text('Не найдено'))
+          : RefreshIndicator(
+              onRefresh: _reload,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Основная информация
+                    _buildSection('Основная информация', Icons.info_outline, [
+                      _buildInfoRow(
+                        'Номер обращения',
+                        _data!.requestNumber,
+                        isMono: true,
+                      ),
+                      _buildInfoRow(
+                        'Тип',
+                        _requestTypes[_data!.requestTypeId] ?? '—',
+                      ),
+                      _buildInfoRow(
+                        'Категория',
+                        _categories[_data!.categoryId] ?? '—',
+                      ),
+                      _buildInfoRow(
+                        'Статус',
+                        _statuses[_data!.requestStatusId] ?? '—',
+                        chip: _buildStatusChip(_data!.requestStatusId),
+                      ),
+                      if (_data!.districtId != null)
+                        _buildInfoRow(
+                          'Район',
+                          _districts[_data!.districtId] ?? '—',
+                        ),
+                      _buildInfoRow('Создано', _formatDate(_data!.createdAt)),
+                      _buildInfoRow(
+                        'Время инцидента',
+                        _formatDate(_data!.incidentTime),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+
+                    // Описание
+                    _buildSection('Описание обращения', Icons.description, [
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Text(
+                          _data!.description,
+                          style: const TextStyle(fontSize: 15, height: 1.5),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+
+                    // Геолокация
+                    _buildSection('Геолокация', Icons.location_on, [
+                      _buildInfoRow('Адрес инцидента', _data!.incidentLocation),
+                      _buildInfoRow('Адрес гражданина', _data!.citizenLocation),
+                      if (_data!.latitude != null &&
+                          _data!.longitude != null) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          height: 300,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: FlutterMap(
+                            options: MapOptions(
+                              initialCenter: LatLng(
+                                _data!.latitude!,
+                                _data!.longitude!,
+                              ),
+                              initialZoom: 15,
                             ),
-                            if (_data!.districtId != null)
-                              _buildInfoRow('Район', _districts[_data!.districtId] ?? '—'),
-                            _buildInfoRow('Создано', _formatDate(_data!.createdAt)),
-                            _buildInfoRow('Время инцидента', _formatDate(_data!.incidentTime)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Описание
-                        _buildSection(
-                          'Описание обращения',
-                          Icons.description,
-                          [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Colors.grey.shade200),
+                            children: [
+                              TileLayer(
+                                urlTemplate:
+                                    'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                subdomains: const ['a', 'b', 'c'],
                               ),
-                              child: Text(
-                                _data!.description,
-                                style: const TextStyle(fontSize: 15, height: 1.5),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Геолокация
-                        _buildSection(
-                          'Геолокация',
-                          Icons.location_on,
-                          [
-                            _buildInfoRow('Адрес инцидента', _data!.incidentLocation),
-                            _buildInfoRow('Адрес гражданина', _data!.citizenLocation),
-                            if (_data!.latitude != null && _data!.longitude != null) ...[
-                              const SizedBox(height: 12),
-                              Container(
-                                height: 300,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                ),
-                                clipBehavior: Clip.antiAlias,
-                                child: FlutterMap(
-                                  options: MapOptions(
-                                    initialCenter: LatLng(_data!.latitude!, _data!.longitude!),
-                                    initialZoom: 15,
-                                  ),
-                                  children: [
-                                    TileLayer(
-                                      urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                      subdomains: const ['a', 'b', 'c'],
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: LatLng(
+                                      _data!.latitude!,
+                                      _data!.longitude!,
                                     ),
-                                    MarkerLayer(
-                                      markers: [
-                                        Marker(
-                                          point: LatLng(_data!.latitude!, _data!.longitude!),
-                                          width: 50,
-                                          height: 50,
-                                          child: const Icon(
-                                            Icons.location_on,
-                                            color: Colors.red,
-                                            size: 50,
-                                          ),
-                                        ),
-                                      ],
+                                    width: 50,
+                                    height: 50,
+                                    child: const Icon(
+                                      Icons.location_on,
+                                      color: Colors.red,
+                                      size: 50,
                                     ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-
-                        // AI-анализ
-                        if (_data!.aiAnalyzedAt != null)
-                          _buildSection(
-                            'AI-анализ',
-                            Icons.auto_awesome,
-                            [
-                              _buildInfoRow(
-                                'Категория (AI)',
-                                _data!.aiCategory ?? '—',
-                                chip: _data!.isAiCorrected == true
-                                    ? const Chip(
-                                        label: Text('Скорректировано'),
-                                        backgroundColor: Colors.amber,
-                                      )
-                                    : null,
-                              ),
-                              _buildInfoRow('Финальная категория', _data!.finalCategory ?? '—'),
-                              _buildInfoRow(
-                                'Приоритет',
-                                _data!.aiPriority ?? '—',
-                                chip: _buildPriorityChip(_data!.aiPriority),
-                              ),
-                              _buildInfoRow(
-                                'Тональность',
-                                _data!.aiSentiment ?? '—',
-                                chip: _buildSentimentChip(_data!.aiSentiment),
-                              ),
-                              if (_data!.aiSummary != null) ...[
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Резюме:',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.blue.shade200),
                                   ),
-                                  child: Text(_data!.aiSummary!),
-                                ),
-                              ],
-                              if (_data!.aiSuggestedAction != null) ...[
-                                const SizedBox(height: 12),
-                                const Text(
-                                  'Рекомендуемое действие:',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.green.shade200),
-                                  ),
-                                  child: Text(_data!.aiSuggestedAction!),
-                                ),
-                              ],
-                              _buildInfoRow('Проанализировано', _formatDate(_data!.aiAnalyzedAt!)),
+                                ],
+                              ),
                             ],
                           ),
-                        const SizedBox(height: 16),
-
-                        // Сотрудники
-                        _buildSection(
-                          'Сотрудники',
-                          Icons.people,
-                          [
-                            _buildInfoRow('Принял', _employees[_data!.acceptedById] ?? '—'),
-                            _buildInfoRow(
-                              'Исполнитель',
-                              _data!.assignedToId != null
-                                  ? (_employees[_data!.assignedToId] ?? '—')
-                                  : 'Не назначен',
-                            ),
-                          ],
                         ),
-                        const SizedBox(height: 24),
-
-                        // Действия
-                        _buildSection(
-                          'Действия',
-                          Icons.settings,
-                          [
-                            Wrap(
-                              spacing: 12,
-                              runSpacing: 12,
-                              children: [
-                                FilledButton.icon(
-                                  onPressed: _showStatusDialog,
-                                  icon: const Icon(Icons.flag),
-                                  label: const Text('Изменить статус'),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0D47A1),
-                                  ),
-                                ),
-                                FilledButton.icon(
-                                  onPressed: _showAssignDialog,
-                                  icon: const Icon(Icons.person_add),
-                                  label: const Text('Назначить исполнителя'),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0D47A1),
-                                  ),
-                                ),
-                                FilledButton.tonalIcon(
-                                  onPressed: _reclassifyAi,
-                                  icon: const Icon(Icons.auto_awesome),
-                                  label: const Text('Пересчитать ИИ'),
-                                ),
-                                FilledButton.tonalIcon(
-                                  onPressed: _correctCategory,
-                                  icon: const Icon(Icons.edit),
-                                  label: const Text('Скорректировать категорию'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
                       ],
-                    ),
-                  ),
+                    ]),
+                    const SizedBox(height: 16),
+
+                    // AI-анализ
+                    if (_data!.aiAnalyzedAt != null)
+                      _buildSection('AI-анализ', Icons.auto_awesome, [
+                        _buildInfoRow(
+                          'Категория (AI)',
+                          _data!.aiCategory ?? '—',
+                          chip: _data!.isAiCorrected == true
+                              ? const Chip(
+                                  label: Text('Скорректировано'),
+                                  backgroundColor: Colors.amber,
+                                )
+                              : null,
+                        ),
+                        _buildInfoRow(
+                          'Финальная категория',
+                          _data!.finalCategory ?? '—',
+                        ),
+                        _buildInfoRow(
+                          'Приоритет',
+                          _data!.aiPriority ?? '—',
+                          chip: _buildPriorityChip(_data!.aiPriority),
+                        ),
+                        _buildInfoRow(
+                          'Тональность',
+                          _data!.aiSentiment ?? '—',
+                          chip: _buildSentimentChip(_data!.aiSentiment),
+                        ),
+                        if (_data!.aiSummary != null) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Резюме:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Text(_data!.aiSummary!),
+                          ),
+                        ],
+                        if (_data!.aiSuggestedAction != null) ...[
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Рекомендуемое действие:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Text(_data!.aiSuggestedAction!),
+                          ),
+                        ],
+                        _buildInfoRow(
+                          'Проанализировано',
+                          _formatDate(_data!.aiAnalyzedAt!),
+                        ),
+                      ]),
+                    const SizedBox(height: 16),
+
+                    // Сотрудники
+                    _buildSection('Сотрудники', Icons.people, [
+                      _buildInfoRow(
+                        'Принял',
+                        _employees[_data!.acceptedById] ?? '—',
+                      ),
+                      _buildInfoRow(
+                        'Исполнитель',
+                        _data!.assignedToId != null
+                            ? (_employees[_data!.assignedToId] ?? '—')
+                            : 'Не назначен',
+                      ),
+                    ]),
+                    const SizedBox(height: 24),
+
+                    // Действия
+                    _buildSection('Действия', Icons.settings, [
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          FilledButton.icon(
+                            onPressed: _showStatusDialog,
+                            icon: const Icon(Icons.flag),
+                            label: const Text('Изменить статус'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D47A1),
+                            ),
+                          ),
+                          FilledButton.icon(
+                            onPressed: _showAssignDialog,
+                            icon: const Icon(Icons.person_add),
+                            label: const Text('Назначить исполнителя'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D47A1),
+                            ),
+                          ),
+                          FilledButton.tonalIcon(
+                            onPressed: _reclassifyAi,
+                            icon: const Icon(Icons.auto_awesome),
+                            label: const Text('Пересчитать ИИ'),
+                          ),
+                          FilledButton.tonalIcon(
+                            onPressed: _correctCategory,
+                            icon: const Icon(Icons.edit),
+                            label: const Text('Скорректировать категорию'),
+                          ),
+                        ],
+                      ),
+                    ]),
+                    const SizedBox(height: 32),
+                  ],
                 ),
+              ),
+            ),
     );
   }
 
@@ -389,7 +405,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {bool isMono = false, Widget? chip}) {
+  Widget _buildInfoRow(
+    String label,
+    String value, {
+    bool isMono = false,
+    Widget? chip,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -406,7 +427,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
           ),
           Expanded(
-            child: chip ??
+            child:
+                chip ??
                 Text(
                   value,
                   style: TextStyle(
@@ -594,17 +616,25 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   }
 
   Future<void> _correctCategory() async {
-    final controller = TextEditingController(text: _data!.aiCategory ?? '');
-    final result = await showDialog<String>(
+    final currentCategoryId = _data!.categoryId;
+    final result = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Скорректировать категорию ИИ'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Категория',
-            hintText: 'Введите правильную категорию',
-            border: OutlineInputBorder(),
+        content: SizedBox(
+          width: 400,
+          child: ListView(
+            shrinkWrap: true,
+            children: _categories.entries
+                .map(
+                  (e) => RadioListTile<int>(
+                    value: e.key,
+                    groupValue: currentCategoryId,
+                    title: Text(e.value),
+                    onChanged: (v) => Navigator.pop(ctx, v),
+                  ),
+                )
+                .toList(),
           ),
         ),
         actions: [
@@ -613,16 +643,16 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             child: const Text('Отмена'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, controller.text),
+            onPressed: () => Navigator.pop(ctx, currentCategoryId),
             child: const Text('Сохранить'),
           ),
         ],
       ),
     );
 
-    if (result != null && result.trim().isNotEmpty) {
+    if (result != null && result != currentCategoryId) {
       try {
-        await _api.correctAiCategory(_data!.id, result.trim());
+        await _api.correctAiCategory(_data!.id, _categories[result] ?? '');
         await _reload();
         _showSuccess('Категория скорректирована');
       } catch (e) {
@@ -634,7 +664,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
   String _formatDate(String isoDate) {
     final date = DateTime.tryParse(isoDate);
     if (date == null) return isoDate;
-    return '${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year} '
-        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+
+    // Конвертируем в часовой пояс Новосибирска (UTC+7)
+    final novosibirskTime = date.toUtc().add(const Duration(hours: 7));
+
+    return '${novosibirskTime.day.toString().padLeft(2, '0')}.${novosibirskTime.month.toString().padLeft(2, '0')}.${novosibirskTime.year} '
+        '${novosibirskTime.hour.toString().padLeft(2, '0')}:${novosibirskTime.minute.toString().padLeft(2, '0')}';
   }
 }

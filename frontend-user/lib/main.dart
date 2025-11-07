@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'app_router.dart';
@@ -12,11 +13,7 @@ void main() async {
 
   final router = AppRouter.createRouter();
 
-  runApp(
-    ProviderScope(
-      child: MvdUserApp(router: router),
-    ),
-  );
+  runApp(ProviderScope(child: MvdUserApp(router: router)));
 }
 
 class MvdUserApp extends StatelessWidget {
@@ -28,6 +25,15 @@ class MvdUserApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'МВД России - Подача обращений',
       debugShowCheckedModeBanner: false,
+
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ru', 'RU'), Locale('en', 'US')],
+      locale: const Locale('ru', 'RU'),
+
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
@@ -48,9 +54,7 @@ class MvdUserApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: const Color(0xFFF5F7FA),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 16,
