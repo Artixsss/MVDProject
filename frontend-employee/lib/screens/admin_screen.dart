@@ -49,11 +49,11 @@ class _AdminScreenState extends State<AdminScreen> with SingleTickerProviderStat
 
     try {
       final results = await Future.wait<dynamic>([
-        _api.getCategories(),
-        _api.getRequestTypes(),
-        _api.getRequestStatuses(),
-        _api.getEmployees(),
-        _api.getDistricts(),
+        _api.getCategories(forceRefresh: true),
+        _api.getRequestTypes(forceRefresh: true),
+        _api.getRequestStatuses(forceRefresh: true),
+        _api.getEmployees(forceRefresh: true),
+        _api.getDistricts(forceRefresh: true),
       ]);
 
       if (!mounted) return;

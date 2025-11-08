@@ -86,6 +86,7 @@ namespace MvdBackend.Controllers
                     user.Id,
                     user.Username,
                     Role = user.Role.Name,
+                    RoleId = user.RoleId, // Добавляем ID роли для проверок на фронтенде
                     Employee = new
                     {
                         user.Employee.Id,

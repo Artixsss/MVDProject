@@ -2,14 +2,20 @@ class UserSession {
   final int id;
   final String username;
   final String role;
+  final int roleId; // ID роли для проверок
   final String fullName;
 
   int get employeeId => id;
+  
+  // Проверки ролей
+  bool get isOperator => roleId == 1;
+  bool get isAdmin => roleId == 3;
 
   const UserSession({
     required this.id,
     required this.username,
     required this.role,
+    required this.roleId,
     required this.fullName,
   });
 
@@ -30,6 +36,7 @@ class UserSession {
         id: (json['id'] ?? json['Id']) as int? ?? 0,
         username: (json['username'] ?? json['Username'])?.toString() ?? '',
         role: (json['role'] ?? json['Role'])?.toString() ?? 'Operator',
+        roleId: (json['roleId'] ?? json['RoleId']) as int? ?? 1, // По умолчанию оператор
         fullName: fullName,
       );
     } catch (e) {
@@ -41,6 +48,7 @@ class UserSession {
     'id': id,
     'username': username,
     'role': role,
+    'roleId': roleId,
     'fullName': fullName,
   };
 }

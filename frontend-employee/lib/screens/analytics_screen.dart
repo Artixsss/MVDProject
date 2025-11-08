@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../widgets/home_action.dart';
 import '../widgets/user_profile_action.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
@@ -63,7 +64,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => context.go('/home'),
             tooltip: 'Назад',
           ),
           title: const Text('Аналитика'),

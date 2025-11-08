@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
 import '../models/citizen_request.dart';
 import 'package:flutter/services.dart';
+import '../utils/app_theme.dart';
 
 /// Публичный экран для граждан - подача обращений без авторизации
 class CitizenComplaintScreen extends StatefulWidget {
@@ -268,6 +269,8 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
 
     setState(() => _loading = true);
     try {
+      // Отправляем обращение - ИИ анализирует СИНХРОННО (пользователь ждет)
+      // Покажите индикатор "Анализируется ИИ..." если нужно
       final result = await _api.submitNewRequest(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
@@ -285,19 +288,9 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
 
       if (!mounted) return;
 
-      // Ждем немного, чтобы AI успел проанализировать
-      await Future.delayed(const Duration(seconds: 3));
-
-      // Получаем полные данные обращения с AI-анализом
-      CitizenRequestDto? fullRequest;
-      try {
-        fullRequest = await _api.getRequestByNumber(result.requestNumber);
-      } catch (e) {
-        // Если не удалось получить, показываем без AI-анализа
-      }
-
+      // ИИ анализ уже выполнен! result содержит все данные включая AI-категорию
       // Показываем диалог с номером обращения и AI-анализом
-      _showSuccessDialog(result.requestNumber, fullRequest);
+      _showSuccessDialog(result.requestNumber, result);
     } catch (e) {
       if (!mounted) return;
       _showError('Ошибка создания обращения: $e');
@@ -315,7 +308,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
       builder: (ctx) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green, size: 32),
+            Icon(
+              AppTheme.iconCheckCircle,
+              color: AppTheme.successColor,
+              size: 32,
+            ),
             SizedBox(width: 8),
             Text('✅ Обращение принято'),
           ],
@@ -331,11 +328,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
+              decoration: AppTheme.infoCardDecoration,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -353,13 +346,13 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                             fontFamily: 'monospace',
-                            color: Colors.blue,
+                            color: AppTheme.primaryColor,
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.content_copy, size: 20),
+                        icon: const Icon(AppTheme.iconCopy, size: 20),
                         onPressed: () {
                           _copyToClipboard(requestNumber, ctx);
                         },
@@ -373,7 +366,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
             const SizedBox(height: 16),
             const Text(
               'Сохраните этот номер! С его помощью вы сможете отследить статус вашего обращения.',
-              style: TextStyle(fontSize: 14, color: Colors.black54),
+              style: TextStyle(fontSize: 14, color: AppTheme.textSecondary),
             ),
 
             // AI-анализ (если доступен)
@@ -384,9 +377,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.purple.shade50,
+                  color: AppTheme.primaryColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.purple.shade200),
+                  border: Border.all(
+                    color: AppTheme.primaryColor.withOpacity(0.3),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -395,7 +390,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                       children: [
                         Icon(
                           Icons.auto_awesome,
-                          color: Colors.purple.shade700,
+                          color: AppTheme.primaryColor,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -469,6 +464,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                 _incidentTime = DateTime.now();
               });
             },
+            style: AppTheme.primaryButtonStyle.copyWith(
+              padding: const MaterialStatePropertyAll(
+                EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+            ),
             child: const Text('Подать ещё'),
           ),
         ],
@@ -480,7 +480,7 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: AppTheme.errorColor,
         duration: const Duration(seconds: 4),
       ),
     );
@@ -488,13 +488,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Подать обращение'),
         centerTitle: true,
-        backgroundColor: const Color(0xFF0D47A1),
+        backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
         actions: [
           TextButton.icon(
@@ -508,7 +506,30 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
         ],
       ),
       body: _loading && !_showMap
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 24),
+                  Text(
+                    'Анализируется ИИ...',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Пожалуйста, подождите',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Center(
@@ -522,38 +543,33 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         // Заголовок
                         Text(
                           'Система приёма обращений граждан',
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: const Color(0xFF0D47A1),
-                          ),
+                          style: AppTheme.headlineStyle,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Заполните форму ниже для подачи обращения',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: Colors.black54,
-                          ),
+                          style: AppTheme.hintTextStyle,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 32),
 
                         // Личные данные
-                        _buildSectionHeader('Личные данные'),
+                        AppTheme.buildSectionHeader(
+                          'Личные данные',
+                          icon: AppTheme.iconPerson,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Поля, отмеченные * являются обязательными',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
+                          style: AppTheme.hintTextStyle.copyWith(fontSize: 12),
                         ),
                         const SizedBox(height: 16),
 
-                        _buildTextField(
+                        AppTheme.buildTextField(
                           controller: _lastNameController,
                           label: 'Фамилия *',
-                          icon: Icons.person,
+                          icon: AppTheme.iconPerson,
                           validator: (v) {
                             if (v?.trim().isEmpty ?? true)
                               return 'Введите фамилию';
@@ -566,10 +582,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        _buildTextField(
+                        AppTheme.buildTextField(
                           controller: _firstNameController,
                           label: 'Имя *',
-                          icon: Icons.person_outline,
+                          icon: AppTheme.iconPersonOutline,
                           validator: (v) {
                             if (v?.trim().isEmpty ?? true) return 'Введите имя';
                             if (v!.trim().length < 2)
@@ -581,10 +597,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        _buildTextField(
+                        AppTheme.buildTextField(
                           controller: _middleNameController,
                           label: 'Отчество',
-                          icon: Icons.person_outline,
+                          icon: AppTheme.iconPersonOutline,
                           helperText: 'Необязательное поле',
                           validator: (v) {
                             if (v != null &&
@@ -597,10 +613,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        _buildTextField(
+                        AppTheme.buildTextField(
                           controller: _phoneController,
                           label: 'Телефон *',
-                          icon: Icons.phone,
+                          icon: AppTheme.iconPhone,
                           keyboardType: TextInputType.phone,
                           validator: (v) {
                             if (v?.trim().isEmpty ?? true)
@@ -619,16 +635,18 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         const SizedBox(height: 32),
 
                         // Данные обращения
-                        _buildSectionHeader('Данные обращения'),
+                        AppTheme.buildSectionHeader(
+                          'Данные обращения',
+                          icon: AppTheme.iconAssignment,
+                        ),
                         const SizedBox(height: 16),
 
                         // Категория (опциональна - нейросеть определит автоматически)
                         DropdownButtonFormField<int>(
                           value: _selectedCategoryId,
-                          decoration: InputDecoration(
+                          decoration: AppTheme.inputDecoration.copyWith(
                             labelText: 'Категория обращения',
-                            prefixIcon: const Icon(Icons.category),
-                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(AppTheme.iconCategory),
                             helperText:
                                 'Опционально. Нейросеть определит категорию автоматически на основе описания',
                           ),
@@ -657,10 +675,9 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         // Тип обращения
                         DropdownButtonFormField<int>(
                           value: _selectedRequestTypeId,
-                          decoration: InputDecoration(
+                          decoration: AppTheme.inputDecoration.copyWith(
                             labelText: 'Тип обращения *',
-                            prefixIcon: const Icon(Icons.description),
-                            border: const OutlineInputBorder(),
+                            prefixIcon: const Icon(AppTheme.iconAssignment),
                             helperText: 'Выберите тип из списка',
                           ),
                           items: _requestTypes
@@ -685,22 +702,21 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Row(
-                                  children: [
-                                    Icon(
-                                      Icons.access_time,
-                                      color: Color(0xFF0D47A1),
+                                Row(
+                                      children: [
+                                        const Icon(
+                                          AppTheme.iconTime,
+                                          color: AppTheme.primaryColor,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          'Дата и время инцидента *',
+                                          style: AppTheme.sectionHeaderStyle.copyWith(
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    SizedBox(width: 12),
-                                    Text(
-                                      'Дата и время инцидента *',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                  ],
-                                ),
                                 const SizedBox(height: 12),
                                 Row(
                                   children: [
@@ -717,24 +733,27 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                             ),
                                           ),
                                           const SizedBox(height: 4),
-                                          Text(
-                                            _formatDateTime(_incidentTime),
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF0D47A1),
-                                            ),
-                                          ),
+                                              Text(
+                                                _formatDateTime(_incidentTime),
+                                                style: const TextStyle(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryColor,
+                                                ),
+                                              ),
                                         ],
                                       ),
                                     ),
                                     FilledButton.icon(
                                       onPressed: _pickDateTime,
-                                      icon: const Icon(Icons.edit),
+                                      icon: const Icon(AppTheme.iconEdit),
                                       label: const Text('Изменить'),
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF0D47A1,
+                                      style: AppTheme.primaryButtonStyle.copyWith(
+                                        padding: const MaterialStatePropertyAll(
+                                          EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 12,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -757,10 +776,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildTextField(
+                            AppTheme.buildTextField(
                               controller: _incidentLocationController,
                               label: 'Адрес инцидента *',
-                              icon: Icons.location_on,
+                              icon: AppTheme.iconLocation,
                               helperText:
                                   'Начните вводить адрес или выберите на карте',
                               validator: (v) => v?.trim().isEmpty ?? true
@@ -853,9 +872,9 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                     return ListTile(
                                       dense: true,
                                       leading: const Icon(
-                                        Icons.location_on,
+                                        AppTheme.iconLocation,
                                         size: 20,
-                                        color: Color(0xFF0D47A1),
+                                        color: AppTheme.primaryColor,
                                       ),
                                       title: Text(
                                         suggestion,
@@ -937,9 +956,9 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                   child: Row(
                                     children: [
                                       const Icon(
-                                        Icons.info_outline,
+                                        AppTheme.iconInfo,
                                         size: 16,
-                                        color: Colors.blue,
+                                        color: AppTheme.primaryColor,
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
@@ -970,10 +989,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _buildTextField(
+                            AppTheme.buildTextField(
                               controller: _citizenLocationController,
                               label: 'Адрес регистрации',
-                              icon: Icons.home,
+                              icon: AppTheme.iconHome,
                               helperText:
                                   'Необязательное поле. Начните вводить адрес для автодополнения',
                               validator: (v) => null, // Необязательное поле
@@ -1010,9 +1029,9 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                     return ListTile(
                                       dense: true,
                                       leading: const Icon(
-                                        Icons.location_on,
+                                        AppTheme.iconLocation,
                                         size: 20,
-                                        color: Color(0xFF0D47A1),
+                                        color: AppTheme.primaryColor,
                                       ),
                                       title: Text(
                                         suggestion,
@@ -1039,10 +1058,10 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                         const SizedBox(height: 16),
 
                         // Описание
-                        _buildTextField(
+                        AppTheme.buildTextField(
                           controller: _descriptionController,
                           label: 'Описание обращения *',
-                          icon: Icons.notes,
+                          icon: AppTheme.iconNotes,
                           maxLines: 6,
                           helperText:
                               'Минимум 10 символов. Опишите подробно что произошло',
@@ -1072,14 +1091,11 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.send),
+                              : const Icon(AppTheme.iconSend),
                           label: Text(
-                            _loading ? 'Отправка...' : 'Подать обращение',
+                            _loading ? 'Анализируется ИИ...' : 'Подать обращение',
                           ),
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.all(20),
-                            textStyle: const TextStyle(fontSize: 18),
-                          ),
+                          style: AppTheme.primaryButtonStyle,
                         ),
                       ],
                     ),
@@ -1090,49 +1106,6 @@ class _CitizenComplaintScreenState extends State<CitizenComplaintScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0D47A1).withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF0D47A1),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType? keyboardType,
-    int maxLines = 1,
-    String? Function(String?)? validator,
-    Widget? suffix,
-    String? helperText,
-  }) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon),
-        border: const OutlineInputBorder(),
-        suffixIcon: suffix,
-        helperText: helperText,
-        helperMaxLines: 2,
-      ),
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: validator,
-    );
-  }
 
   Future<void> _pickDateTime() async {
     final now = DateTime.now();

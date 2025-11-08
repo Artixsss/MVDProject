@@ -425,13 +425,49 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
             false,
             () => context.go('/analytics'),
           ),
-          if (_userRole == 'Admin' || _userRole == 'Manager')
+          const Divider(height: 32),
+          
+          // ФУНКЦИОНАЛ ПО РОЛЯМ
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              _userRole == 'Admin' ? 'АДМИНИСТРАТОР' : 'ОПЕРАТОР',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          
+          // Для операторов - создание обращений
+          if (_userRole == 'Operator' || _userRole == 'Admin')
+            _buildMenuItem(
+              Icons.add_box,
+              'Создать обращение',
+              false,
+              () => context.go('/operator/create-request'),
+            ),
+          
+          // Для админов - управление сотрудниками
+          if (_userRole == 'Admin')
+            _buildMenuItem(
+              Icons.manage_accounts,
+              'Управление сотрудниками',
+              false,
+              () => context.go('/admin/employees'),
+            ),
+          
+          // Для админов - администрирование БД
+          if (_userRole == 'Admin')
             _buildMenuItem(
               Icons.admin_panel_settings,
-              'Администрирование',
+              'Администрирование БД',
               false,
               () => context.go('/admin'),
             ),
+          
           const Divider(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

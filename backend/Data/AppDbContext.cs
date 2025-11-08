@@ -114,6 +114,10 @@ namespace MvdBackend.Data
                 .WithMany(r => r.Users)
                 .HasForeignKey(u => u.RoleId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Игнорируем поле Phone в Employee, так как столбец не существует в БД
+            modelBuilder.Entity<Employee>()
+                .Ignore(e => e.Phone);
         }
     }
 }

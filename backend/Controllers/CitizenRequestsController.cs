@@ -352,6 +352,7 @@ namespace MvdBackend.Controllers
                     using var scope = _serviceProvider.CreateScope();
                     var scopedServices = scope.ServiceProvider;
                     var backgroundRepository = scopedServices.GetRequiredService<ICitizenRequestRepository>();
+                    var backgroundCategoryRepo = scopedServices.GetRequiredService<IRepository<Category>>();
 
                     try
                     {
@@ -369,6 +370,17 @@ namespace MvdBackend.Controllers
                         requestToUpdate.AiSentiment = analysis.Sentiment;
                         requestToUpdate.AiAnalyzedAt = DateTime.UtcNow;
                         requestToUpdate.FinalCategory = analysis.Category;
+
+                        // Обновляем CategoryId на основе ИИ анализа, если категория не была выбрана сотрудником
+                        var allCategories = await backgroundCategoryRepo.GetAllAsync();
+                        var matchedCategory = allCategories.FirstOrDefault(c => 
+                            c.Name.Equals(analysis.Category, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (matchedCategory != null && matchedCategory.Id != requestToUpdate.CategoryId)
+                        {
+                            requestToUpdate.CategoryId = matchedCategory.Id;
+                            _logger.LogInformation($"Category updated from AI: {matchedCategory.Name} (ID: {matchedCategory.Id})");
+                        }
 
                         backgroundRepository.Update(requestToUpdate);
                         await backgroundRepository.SaveAsync();
@@ -505,10 +517,28 @@ namespace MvdBackend.Controllers
         public async Task<IActionResult> CorrectAiCategory(int id, [FromBody] string correctCategory)
         {
             var request = await _requestRepository.GetByIdAsync(id);
-            if (request == null) return NotFound();
+            if (request == null) return NotFound("Обращение не найдено");
 
+            var oldCategory = request.AiCategory;
             request.FinalCategory = correctCategory;
             request.IsAiCorrected = true;
+
+            // Ищем категорию по названию и обновляем CategoryId
+            var allCategories = await _categoryRepository.GetAllAsync();
+            var matchedCategory = allCategories.FirstOrDefault(c => 
+                c.Name.Equals(correctCategory, StringComparison.OrdinalIgnoreCase));
+            
+            if (matchedCategory != null)
+            {
+                request.CategoryId = matchedCategory.Id;
+                _logger.LogInformation($"Employee corrected category from '{oldCategory}' to '{correctCategory}' (ID: {matchedCategory.Id})");
+            }
+            else
+            {
+                _logger.LogWarning($"Category '{correctCategory}' not found in database during correction");
+            }
+
+            request.UpdatedAt = DateTime.UtcNow;
 
             _requestRepository.Update(request);
             await _requestRepository.SaveAsync();
@@ -520,12 +550,19 @@ namespace MvdBackend.Controllers
                     "AI_CORRECTION",
                     "CitizenRequest",
                     id,
-                    oldValues: request.AiCategory,
-                    newValues: correctCategory
+                    oldValues: oldCategory,
+                    newValues: correctCategory,
+                    userId: request.AcceptedById,
+                    requestId: id
                 );
             });
 
-            return Ok();
+            return Ok(new { 
+                message = "Категория обновлена", 
+                requestId = id,
+                newCategoryId = request.CategoryId,
+                finalCategory = correctCategory
+            });
         }
         [HttpGet("check/{requestNumber}")]
         public async Task<IActionResult> GetStatusByNumber(string requestNumber)
@@ -727,47 +764,56 @@ namespace MvdBackend.Controllers
                     throw new Exception($"Ошибка сохранения обращения: {saveEx.InnerException?.Message ?? saveEx.Message}", saveEx);
                 }
 
-                // Запускаем AI-анализ в фоне (не блокирует создание обращения)
-                _ = Task.Run(async () =>
+                // Запускаем AI-анализ СИНХРОННО - пользователь ждет результата
+                try
                 {
-                    using var scope = _serviceProvider.CreateScope();
-                    var scopedServices = scope.ServiceProvider;
-                    var backgroundRepository = scopedServices.GetRequiredService<ICitizenRequestRepository>();
-                    var backgroundGemini = scopedServices.GetRequiredService<IGeminiService>();
-                    var backgroundLogger = scopedServices.GetRequiredService<ILogger<CitizenRequestsController>>();
+                    _logger.LogInformation($"🤖 Starting synchronous AI analysis for request #{request.Id}");
+                    var analysis = await _geminiService.AnalyzeRequestAsync(request.Description);
 
-                    try
+                    // Сохраняем результаты ИИ анализа
+                    request.AiCategory = analysis.Category;
+                    request.AiPriority = analysis.Priority;
+                    request.AiSummary = analysis.Summary;
+                    request.AiSuggestedAction = analysis.SuggestedAction;
+                    request.AiSentiment = analysis.Sentiment;
+                    request.AiAnalyzedAt = DateTime.UtcNow;
+                    request.FinalCategory = analysis.Category;
+
+                    // ВАЖНО: Если гражданин НЕ выбрал категорию (CategoryId == 10 "Другое"),
+                    // то ищем категорию по названию от ИИ и обновляем CategoryId
+                    if (!dto.CategoryId.HasValue || request.CategoryId == 10)
                     {
-                        backgroundLogger.LogInformation($"Starting AI analysis for request #{request.Id}");
-                        var analysis = await backgroundGemini.AnalyzeRequestAsync(request.Description);
-
-                        var requestToUpdate = await backgroundRepository.GetByIdAsync(request.Id);
-                        if (requestToUpdate == null)
+                        var allCategories = await _categoryRepository.GetAllAsync();
+                        var matchedCategory = allCategories.FirstOrDefault(c => 
+                            c.Name.Equals(analysis.Category, StringComparison.OrdinalIgnoreCase));
+                        
+                        if (matchedCategory != null)
                         {
-                            backgroundLogger.LogWarning($"Request #{request.Id} not found for AI update");
-                            return;
+                            request.CategoryId = matchedCategory.Id;
+                            _logger.LogInformation($"✅ Category updated from AI: {matchedCategory.Name} (ID: {matchedCategory.Id})");
                         }
-
-                        requestToUpdate.AiCategory = analysis.Category;
-                        requestToUpdate.AiPriority = analysis.Priority;
-                        requestToUpdate.AiSummary = analysis.Summary;
-                        requestToUpdate.AiSuggestedAction = analysis.SuggestedAction;
-                        requestToUpdate.AiSentiment = analysis.Sentiment;
-                        requestToUpdate.AiAnalyzedAt = DateTime.UtcNow;
-                        requestToUpdate.FinalCategory = analysis.Category;
-
-                        backgroundRepository.Update(requestToUpdate);
-                        await backgroundRepository.SaveAsync();
-
-                        backgroundLogger.LogInformation($"AI analysis saved for request #{request.Id}");
+                        else
+                        {
+                            _logger.LogWarning($"⚠️ AI category '{analysis.Category}' not found in database. Keeping 'Другое'");
+                        }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        // AI-анализ не критичен - обращение уже создано
-                        // Ошибка может быть из-за VPN или недоступности Gemini API
-                        backgroundLogger.LogWarning(ex, $"AI analysis failed for request #{request.Id} (this is not critical - request was created successfully). Error: {ex.Message}");
+                        _logger.LogInformation($"ℹ️ User selected category {request.CategoryId}, keeping user choice");
                     }
-                });
+
+                    // Обновляем обращение с результатами ИИ
+                    _requestRepository.Update(request);
+                    await _requestRepository.SaveAsync();
+
+                    _logger.LogInformation($"✅ AI analysis completed and saved for request #{request.Id}");
+                }
+                catch (Exception aiEx)
+                {
+                    // Если ИИ не сработал - не критично, обращение создано
+                    _logger.LogWarning(aiEx, $"⚠️ AI analysis failed for request #{request.Id}: {aiEx.Message}");
+                    // Продолжаем выполнение, обращение уже создано
+                }
 
                 // Логируем создание заявления
                 await _auditService.LogActionAsync(
@@ -785,13 +831,13 @@ namespace MvdBackend.Controllers
                     requestId: request.Id
                 );
 
-                // Возвращаем полный DTO
+                // Возвращаем полный DTO с результатами ИИ анализа
                 var responseDto = new CitizenRequestDto
                 {
                     Id = request.Id,
                     CitizenId = request.CitizenId,
                     RequestTypeId = request.RequestTypeId,
-                    CategoryId = request.CategoryId,
+                    CategoryId = request.CategoryId, // Уже обновлен ИИ
                     Description = request.Description,
                     AcceptedById = request.AcceptedById,
                     AssignedToId = request.AssignedToId,
@@ -804,14 +850,15 @@ namespace MvdBackend.Controllers
                     Latitude = request.Location is Point p ? (double?)p.Y : dto.Latitude,
                     Longitude = request.Location is Point p2 ? (double?)p2.X : dto.Longitude,
                     RequestNumber = request.RequestNumber,
-                    AiCategory = null,
-                    AiPriority = null,
-                    AiSummary = null,
-                    AiSuggestedAction = null,
-                    AiSentiment = null,
-                    AiAnalyzedAt = null,
-                    IsAiCorrected = false,
-                    FinalCategory = null
+                    // ИИ данные (уже проанализировано!)
+                    AiCategory = request.AiCategory,
+                    AiPriority = request.AiPriority,
+                    AiSummary = request.AiSummary,
+                    AiSuggestedAction = request.AiSuggestedAction,
+                    AiSentiment = request.AiSentiment,
+                    AiAnalyzedAt = request.AiAnalyzedAt,
+                    IsAiCorrected = request.IsAiCorrected,
+                    FinalCategory = request.FinalCategory
                 };
 
                 return CreatedAtAction("GetCitizenRequest", new { id = request.Id }, responseDto);

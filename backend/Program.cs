@@ -45,9 +45,10 @@ builder.Services.AddScoped<IRepository<User>, Repository<User>>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>(); 
 builder.Services.AddScoped<IUserRepository, UserRepository>(); 
 // Services
-builder.Services.AddHttpClient<IGeminiService, GeminiService>();
+// Используем OpenRouter с MiniMax (работает БЕЗ VPN!)
+builder.Services.AddHttpClient<IGeminiService, OpenRouterService>();
 builder.Services.AddHttpClient<INominatimService, NominatimService>();
-builder.Services.AddScoped<IGeminiService, GeminiService>();
+builder.Services.AddScoped<IGeminiService, OpenRouterService>();
 builder.Services.AddScoped<INominatimService, NominatimService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddHttpContextAccessor();

@@ -426,17 +426,18 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               ),
             ),
           ),
-          Expanded(
-            child:
-                chip ??
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontFamily: isMono ? 'monospace' : null,
-                    letterSpacing: isMono ? 1.5 : null,
-                  ),
+          if (chip != null)
+            chip
+          else
+            Expanded(
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontFamily: isMono ? 'monospace' : null,
+                  letterSpacing: isMono ? 1.5 : null,
                 ),
-          ),
+              ),
+            ),
         ],
       ),
     );

@@ -48,7 +48,14 @@ namespace MvdBackend.Data
                 {
             new Category { Name = "Имущественные преступления", Description = "Кражи, грабежи, мошенничество" },
             new Category { Name = "Транспорт и ПДД", Description = "ДТП, нарушение ПДД" },
-            new Category { Name = "Общественный порядок", Description = "Хулиганство, драки" }
+            new Category { Name = "Общественный порядок", Description = "Хулиганство, драки, шум" },
+            new Category { Name = "Бытовые конфликты", Description = "Семейные ссоры, соседские конфликты" },
+            new Category { Name = "Угрозы и безопасность", Description = "Угрозы жизни, насилие, вымогательство" },
+            new Category { Name = "Киберпреступления", Description = "Мошенничество в интернете, взлом аккаунтов" },
+            new Category { Name = "Наркотики", Description = "Незаконный оборот наркотиков" },
+            new Category { Name = "Экология и животные", Description = "Жестокое обращение с животными, экологические нарушения" },
+            new Category { Name = "Пропавшие люди", Description = "Розыск пропавших без вести" },
+            new Category { Name = "Другое", Description = "Прочие обращения, не попадающие в основные категории" }
         };
                 context.Categories.AddRange(categories);
                 context.SaveChanges();
@@ -72,9 +79,9 @@ namespace MvdBackend.Data
             {
                 var employees = new[]
                 {
-            new Employee { LastName = "Козлов", FirstName = "Александр", Patronymic = "Сергеевич", Phone = "+79130000001" },
-            new Employee { LastName = "Никитина", FirstName = "Елена", Patronymic = "Дмитриевна", Phone = "+79130000002" },
-            new Employee { LastName = "Федоров", FirstName = "Максим", Patronymic = "Игоревич", Phone = "+79130000003" }
+            new Employee { LastName = "Козлов", FirstName = "Александр", Patronymic = "Сергеевич" },
+            new Employee { LastName = "Никитина", FirstName = "Елена", Patronymic = "Дмитриевна" },
+            new Employee { LastName = "Федоров", FirstName = "Максим", Patronymic = "Игоревич" }
         };
                 context.Employees.AddRange(employees);
                 context.SaveChanges();

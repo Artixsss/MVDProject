@@ -705,6 +705,9 @@ class ApiService {
       throw Exception('Не удалось подать обращение: ${e.message}');
     }
   }
+
+  // Геттер для доступа к Dio (для прямых запросов)
+  Dio get dio => _dio;
 }
 
 /// Auth interceptor to add token to requests
